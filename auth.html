@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">🎵</div>
+    <div class="auth-title">Spotify Queue</div>
+    <div class="auth-sub">
+      {% if mode == "login" %}Melde dich an um loszulegen{% else %}Erstelle einen Account{% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="field">
+        <label>Benutzername</label>
+        <input type="text" name="username" placeholder="z. B. lisa" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>Passwort</label>
+        <input type="password" name="password" placeholder="••••••••" autocomplete="{% if mode == 'login' %}current-password{% else %}new-password{% endif %}" required>
+      </div>
+      <button class="btn btn-green" style="width:100%;justify-content:center;">
+        {% if mode == "login" %}Anmelden{% else %}Registrieren{% endif %}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      {% if mode == "login" %}
+        Noch kein Account? <a href="{{ url_for('register') }}">Registrieren</a>
+      {% else %}
+        Bereits registriert? <a href="{{ url_for('login') }}">Anmelden</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

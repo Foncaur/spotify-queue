@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Kollaborative Spotify-Warteschlange</title>
+<style>
+  :root {
+    --green: #1DB954;
+    --green-dark: #1aa34a;
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --surface2: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #888;
+    --radius: 10px;
+    --danger: #e05252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Circular', 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid #333;
+  }
+  .nav-logo { font-size: 1.2rem; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: .4rem; }
+  .nav-links { display: flex; gap: 1rem; align-items: center; }
+  .nav-links a, .nav-links span {
+    color: var(--muted); text-decoration: none; font-size: .9rem;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links .user { color: var(--green); font-weight: 600; }
+
+  /* ── MAIN ── */
+  main { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+  /* ── ALERTS ── */
+  .alerts { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: .5rem; }
+  .alert {
+    padding: .75rem 1.2rem;
+    border-radius: var(--radius);
+    font-size: .9rem;
+    border-left: 4px solid;
+  }
+  .alert-success { background: #0f2a1a; border-color: var(--green); color: #6ee09a; }
+  .alert-error   { background: #2a0f0f; border-color: var(--danger); color: #f0a0a0; }
+  .alert-info    { background: #0f1f2a; border-color: #4a9edd; color: #8cc8f0; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+
+  /* ── FORM ── */
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .3rem; }
+  input[type=text], input[type=password] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid #444;
+    color: var(--text);
+    padding: .65rem .9rem;
+    border-radius: 6px;
+    font-size: .95rem;
+    transition: border-color .2s;
+  }
+  input:focus { outline: none; border-color: var(--green); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .6rem 1.4rem;
+    border-radius: 999px;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: transform .15s, opacity .15s;
+    text-decoration: none;
+  }
+  .btn:hover { transform: scale(1.04); opacity: .9; }
+  .btn-green  { background: var(--green);  color: #000; }
+  .btn-ghost  { background: transparent; border: 1px solid #555; color: var(--text); }
+  .btn-danger { background: var(--danger); color: #fff; padding: .35rem .9rem; font-size: .8rem; }
+  .btn-sm     { padding: .35rem .9rem; font-size: .82rem; }
+
+  /* ── ADD SONG ROW ── */
+  .add-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .add-row input[type=text] { flex: 1; min-width: 180px; }
+
+  /* ── QUEUE TABLE ── */
+  .queue-header {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 130px 90px;
+    gap: .5rem;
+    font-size: .78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 0 .5rem .5rem;
+    border-bottom: 1px solid #333;
+    margin-bottom: .5rem;
+  }
+  .song-row {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 130px 90px;
+    gap: .5rem;
+    align-items: center;
+    padding: .65rem .5rem;
+    border-radius: 6px;
+    transition: background .15s;
+  }
+  .song-row:hover { background: var(--surface2); }
+  .song-row .pos  { color: var(--muted); font-size: .85rem; text-align: center; }
+  .song-title     { font-size: .95rem; }
+  .song-uri       { font-size: .75rem; color: var(--muted); margin-top: .15rem;
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .song-user      { font-size: .82rem; }
+  .user-badge {
+    display: inline-block;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    font-size: .76rem;
+    font-weight: 600;
+    background: #2a3a2a;
+    color: var(--green);
+  }
+  .song-actions   { display: flex; justify-content: flex-end; }
+  .now-playing {
+    background: #1a2a1a;
+    border: 1px solid var(--green);
+    border-radius: 6px;
+  }
+
+  /* ── EXPORT ── */
+  .export-row { display: flex; gap: .8rem; flex-wrap: wrap; }
+
+  /* ── USERS STRIP ── */
+  .users-strip { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .user-pill {
+    background: var(--surface2);
+    padding: .3rem .8rem;
+    border-radius: 999px;
+    font-size: .82rem;
+    color: var(--muted);
+  }
+  .user-pill.me { background: #1a2a1a; color: var(--green); border: 1px solid var(--green); }
+
+  /* ── EMPTY ── */
+  .empty { text-align: center; color: var(--muted); padding: 3rem 1rem; font-size: .95rem; }
+  .empty span { font-size: 3rem; display: block; margin-bottom: 1rem; }
+
+  /* ── AUTH ── */
+  .auth-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 10%, #1a2a1a 0%, var(--bg) 60%);
+  }
+  .auth-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  }
+  .auth-logo { text-align: center; font-size: 2rem; margin-bottom: .5rem; }
+  .auth-title { text-align: center; font-size: 1.4rem; font-weight: 700; margin-bottom: .25rem; }
+  .auth-sub   { text-align: center; color: var(--muted); font-size: .88rem; margin-bottom: 1.8rem; }
+  .auth-footer { text-align: center; margin-top: 1.2rem; font-size: .85rem; color: var(--muted); }
+  .auth-footer a { color: var(--green); text-decoration: none; }
+</style>
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>

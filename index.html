@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block body %}
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">🎵 Spotify Queue</div>
+  <div class="nav-links">
+    <span class="user">{{ current_user }}</span>
+    <a href="{{ url_for('logout') }}">Abmelden</a>
+  </div>
+</nav>
+
+<main>
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alerts">
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Active users -->
+  <div class="card" style="padding:1rem 1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <span style="font-size:.85rem;color:var(--muted);">👥 Teilnehmer:</span>
+      <div class="users-strip">
+        {% for u in users %}
+          <span class="user-pill {% if u == current_user %}me{% endif %}">{{ u }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Add song -->
+  <div class="card">
+    <h2>➕ Song hinzufügen</h2>
+    <form method="POST" action="{{ url_for('add') }}">
+      <div class="field">
+        <label>Songtitel (zur Anzeige)</label>
+        <input type="text" name="title" placeholder="z. B. Bohemian Rhapsody – Queen" required>
+      </div>
+      <div class="field">
+        <label>Spotify-Link oder URI</label>
+        <input type="text" name="spotify_input"
+               placeholder="https://open.spotify.com/track/… oder spotify:track:…" required>
+      </div>
+      <button class="btn btn-green" type="submit">🎵 Hinzufügen</button>
+    </form>
+    <div style="margin-top:.8rem;padding:.75rem 1rem;background:var(--surface2);border-radius:8px;font-size:.8rem;color:var(--muted);">
+      <strong style="color:var(--text);">Tipp:</strong>
+      In Spotify: Rechtsklick auf Song → „Link kopieren" oder „URI kopieren".<br>
+      Beispiel-URI: <code style="color:var(--green);">spotify:track:4iV5W9uYEdYUVa79Axb7Rh</code>
+    </div>
+  </div>
+
+  <!-- Queue -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;">
+      <h2 style="margin:0;">🎧 Warteschlange
+        <span style="font-size:.85rem;font-weight:400;color:var(--muted);">({{ songs|length }} Songs)</span>
+      </h2>
+      {% if songs %}
+      <div class="export-row">
+        <a href="{{ url_for('export', fmt='uris') }}" class="btn btn-ghost btn-sm">⬇ URIs (.txt)</a>
+        <a href="{{ url_for('export', fmt='json') }}" class="btn btn-ghost btn-sm">⬇ JSON</a>
+        <a href="{{ url_for('export', fmt='txt') }}" class="btn btn-ghost btn-sm">⬇ Liste (.txt)</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if songs %}
+      <div class="queue-header">
+        <span>#</span>
+        <span>Song</span>
+        <span>Hinzugefügt von</span>
+        <span></span>
+      </div>
+      {% for song in songs %}
+        <div class="song-row {% if loop.first %}now-playing{% endif %}">
+          <div class="pos">
+            {% if loop.first %}▶{% else %}{{ loop.index }}{% endif %}
+          </div>
+          <div>
+            <div class="song-title">{{ song.title }}</div>
+            <div class="song-uri">{{ song.uri }}</div>
+          </div>
+          <div class="song-user">
+            <span class="user-badge">{{ song.username }}</span>
+          </div>
+          <div class="song-actions">
+            {% if song.username == current_user %}
+              <form method="POST" action="{{ url_for('delete', song_id=song.id) }}"
+                    onsubmit="return confirm('Song entfernen?')">
+                <button class="btn btn-danger" type="submit">✕</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      <!-- Rotation info -->
+      <div style="margin-top:1.2rem;padding:.85rem 1rem;background:var(--surface2);border-radius:8px;font-size:.82rem;color:var(--muted);">
+        🔄 <strong style="color:var(--text);">Faire Rotation:</strong>
+        Songs werden nach dem Round-Robin-Prinzip geordnet –
+        Person 1 → Person 2 → Person 3 → … → wieder von vorn.
+      </div>
+
+    {% else %}
+      <div class="empty">
+        <span>🎼</span>
+        Noch keine Songs in der Warteschlange.<br>Füge den ersten hinzu!
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Export help -->
+  {% if songs %}
+  <div class="card" style="border: 1px solid #333;">
+    <h2>📤 Playlist in Spotify importieren</h2>
+    <ol style="font-size:.88rem;color:var(--muted);line-height:1.9;padding-left:1.3rem;">
+      <li>Exportiere die <strong style="color:var(--text);">URIs (.txt)</strong> – eine URI pro Zeile.</li>
+      <li>Öffne <a href="https://www.spotlistr.com" target="_blank" style="color:var(--green);">Spotlistr.com</a>
+          oder ein ähnliches Tool.</li>
+      <li>Wähle „Text/URI Import" und füge den Inhalt der Datei ein.</li>
+      <li>Oder nutze die <strong style="color:var(--text);">Spotify Web API</strong>:
+          <code style="font-size:.78rem;background:var(--surface2);padding:.1rem .3rem;border-radius:4px;">
+          POST /v1/playlists/{id}/tracks</code></li>
+    </ol>
+    <div style="margin-top:.8rem;">
+      <a href="{{ url_for('api_queue') }}" target="_blank" class="btn btn-ghost btn-sm">
+        🔗 JSON-API ansehen
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}

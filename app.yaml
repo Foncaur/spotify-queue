@@ -1,0 +1,6 @@
+runtime: python312
+
+env_variables:
+  SECRET_KEY: "CHANGE_ME_TO_A_RANDOM_STRING"
+
+# Firestore access is via Application Default Credentials – no key needed on GCP.
