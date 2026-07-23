@@ -331,3 +331,42 @@ def api_queue():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Spotify Search (Client Credentials Flow)
+# ═══════════════════════════════════════════════════════════════════════════════
+import base64, requests as _req
+
+def _spotify_token() -> str | None:
+    cid = os.environ.get("SPOTIFY_CLIENT_ID")
+    sec = os.environ.get("SPOTIFY_CLIENT_SECRET")
+    if not cid or not sec:
+        return None
+    creds = base64.b64encode(f"{cid}:{sec}".encode()).decode()
+    r = _req.post("https://accounts.spotify.com/api/token",
+                  data={"grant_type": "client_credentials"},
+                  headers={"Authorization": f"Basic {creds}"}, timeout=5)
+    return r.json().get("access_token") if r.ok else None
+
+@app.route("/search")
+def search():
+    if "username" not in session:
+        return jsonify([]), 401
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
+    token = _spotify_token()
+    if not token:
+        return jsonify({"error": "Spotify-Keys nicht konfiguriert"}), 503
+    r = _req.get("https://api.spotify.com/v1/search",
+                 params={"q": q, "type": "track", "limit": 6},
+                 headers={"Authorization": f"Bearer {token}"}, timeout=5)
+    tracks = r.json().get("tracks", {}).get("items", [])
+    return jsonify([{
+        "uri":    t["uri"],
+        "id":     t["id"],
+        "title":  t["name"],
+        "artist": ", ".join(a["name"] for a in t["artists"]),
+        "cover":  t["album"]["images"][-1]["url"] if t["album"]["images"] else "",
+    } for t in tracks])

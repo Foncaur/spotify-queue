@@ -34,27 +34,59 @@
     </div>
   </div>
 
-  <!-- Add song -->
+  <!-- Add song via search -->
   <div class="card">
-    <h2>➕ Song hinzufügen</h2>
-    <form method="POST" action="{{ url_for('add') }}">
-      <div class="field">
-        <label>Songtitel (zur Anzeige)</label>
-        <input type="text" name="title" placeholder="z. B. Bohemian Rhapsody – Queen" required>
-      </div>
-      <div class="field">
-        <label>Spotify-Link oder URI</label>
-        <input type="text" name="spotify_input"
-               placeholder="https://open.spotify.com/track/… oder spotify:track:…" required>
-      </div>
-      <button class="btn btn-green" type="submit">🎵 Hinzufügen</button>
-    </form>
-    <div style="margin-top:.8rem;padding:.75rem 1rem;background:var(--surface2);border-radius:8px;font-size:.8rem;color:var(--muted);">
-      <strong style="color:var(--text);">Tipp:</strong>
-      In Spotify: Rechtsklick auf Song → „Link kopieren" oder „URI kopieren".<br>
-      Beispiel-URI: <code style="color:var(--green);">spotify:track:4iV5W9uYEdYUVa79Axb7Rh</code>
+    <h2>➕ Song suchen & hinzufügen</h2>
+    <div class="field">
+      <label>Titel oder Künstler eingeben</label>
+      <input type="text" id="searchInput" placeholder="z. B. Bohemian Rhapsody Queen"
+             autocomplete="off" oninput="debounceSearch()">
     </div>
+    <div id="searchResults"></div>
+    <!-- hidden form for submission -->
+    <form method="POST" action="{{ url_for('add') }}" id="addForm" style="display:none">
+      <input type="hidden" name="spotify_input" id="f_uri">
+      <input type="hidden" name="title" id="f_title">
+    </form>
   </div>
+
+  <style>
+    .result-item {
+      display:flex; align-items:center; gap:.8rem;
+      padding:.6rem .8rem; border-radius:8px; cursor:pointer;
+      transition:background .15s;
+    }
+    .result-item:hover { background:var(--surface2); }
+    .result-item img { width:44px; height:44px; border-radius:4px; object-fit:cover; }
+    .result-title { font-size:.9rem; font-weight:600; }
+    .result-artist { font-size:.78rem; color:var(--muted); }
+    #searchResults { margin-top:.4rem; }
+  </style>
+  <script>
+    let timer;
+    function debounceSearch(){ clearTimeout(timer); timer = setTimeout(doSearch, 350); }
+    async function doSearch(){
+      const q = document.getElementById('searchInput').value.trim();
+      const box = document.getElementById('searchResults');
+      if(!q){ box.innerHTML=''; return; }
+      box.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem">Suche…</div>';
+      const res = await fetch('/search?q='+encodeURIComponent(q));
+      if(!res.ok){ box.innerHTML='<div style="color:var(--danger);font-size:.85rem;padding:.5rem">Spotify-Keys fehlen – siehe .env</div>'; return; }
+      const tracks = await res.json();
+      if(!tracks.length){ box.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem">Keine Ergebnisse.</div>'; return; }
+      box.innerHTML = tracks.map(t=>`
+        <div class="result-item" onclick="pickTrack('${t.uri}','${t.title.replace(/'/g,"\\'")} – ${t.artist.replace(/'/g,"\\'")}')">
+          <img src="${t.cover}" onerror="this.style.display='none'">
+          <div><div class="result-title">${t.title}</div><div class="result-artist">${t.artist}</div></div>
+          <span style="margin-left:auto;color:var(--green);font-size:1.2rem">＋</span>
+        </div>`).join('');
+    }
+    function pickTrack(uri, label){
+      document.getElementById('f_uri').value = uri;
+      document.getElementById('f_title').value = label;
+      document.getElementById('addForm').submit();
+    }
+  </script>
 
   <!-- Queue -->
   <div class="card">
