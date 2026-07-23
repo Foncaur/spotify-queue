@@ -8,19 +8,28 @@ import os
 import json
 import re
 import uuid
+import base64
+import requests as _req
 from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect,
     url_for, session, flash, jsonify, send_file
 )
-from werkzeug.security import generate_password_hash, check_password_hash
-from io import BytesIO
-
-# ── Firestore (optional) ─────────────────────────────────────────────────────
 try:
     from google.cloud import firestore
-    db = firestore.Client()
-    USE_FIRESTORE = True
+    from google.oauth2 import service_account
+
+    # Check, ob der Schlüssel als JSON-Text in Render existiert
+    if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
+        info = json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
+        creds = service_account.Credentials.from_service_account_info(info)
+        db = firestore.Client(credentials=creds, project=info.get("project_id"))
+        USE_FIRESTORE = True
+    else:
+        # Lokaler Fallback
+        db = firestore.Client()
+        USE_FIRESTORE = True
+
     print("✅  Connected to Firestore")
 except Exception as e:
     print(f"⚠️  Firestore not available ({e}). Using in-memory storage.")
@@ -157,7 +166,6 @@ def _next_position(songs: list[dict], username: str, users: list[str]) -> float:
     """
     Assign a fractional position so that the queue always interleaves
     contributions fairly (round-robin by user).
-
     Strategy:
       - We track the last position each user has in the queue.
       - The new song is inserted "after" the user's last song but
@@ -329,14 +337,9 @@ def api_queue():
     ])
 
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Spotify Search (Client Credentials Flow)
 # ═══════════════════════════════════════════════════════════════════════════════
-import base64, requests as _req
 
 def _spotify_token() -> str | None:
     cid = os.environ.get("SPOTIFY_CLIENT_ID")
@@ -370,3 +373,7 @@ def search():
         "artist": ", ".join(a["name"] for a in t["artists"]),
         "cover":  t["album"]["images"][-1]["url"] if t["album"]["images"] else "",
     } for t in tracks])
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
