@@ -15,6 +15,9 @@ from flask import (
     Flask, render_template, request, redirect,
     url_for, session, flash, jsonify, send_file
 )
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# ── Firestore (optional) ─────────────────────────────────────────────────────
 try:
     from google.cloud import firestore
     from google.oauth2 import service_account
